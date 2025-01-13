@@ -12,6 +12,9 @@ import javafx.scene.control.cell.CheckBoxTableCell;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
 public class HelloController {
     @FXML
@@ -43,6 +46,25 @@ public class HelloController {
         workerColumn.setCellValueFactory(new PropertyValueFactory<>("worker"));
         completeColumn.setCellValueFactory(new PropertyValueFactory<>("completed"));
         completeColumn.setCellFactory(CheckBoxTableCell.forTableColumn(completeColumn));
+
+        loadTasksFromDatabase();
+    }
+
+    private void loadTasksFromDatabase() {
+        try (Connection connection = DatabaseSetup.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT * FROM tasks")) {
+
+            while (resultSet.next()) {
+                String name = resultSet.getString("name");
+                String worker = resultSet.getString("worker");
+                boolean completed = resultSet.getBoolean("completed");
+                Task task = new Task(name, worker, completed);
+                taskList.add(task);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @FXML

@@ -1,23 +1,61 @@
 package com.example.maybeworking;
 
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+
 public class Task {
-    private static int idCounter = 0;
-    private int id;
-    private String name;
-    private String worker;
-    private boolean completed;
+    private final SimpleStringProperty name;
+    private final SimpleStringProperty worker;
+    private final SimpleBooleanProperty completed;
 
     public Task(String name, String worker, boolean completed) {
-        this.id = ++idCounter;
-        this.name = name;
-        this.worker = worker;
-        this.completed = completed;
+        this.name = new SimpleStringProperty(name);
+        this.worker = new SimpleStringProperty(worker);
+        this.completed = new SimpleBooleanProperty(completed);
     }
 
-    // Getters and setters (if needed)
+    public String getName() {
+        return name.get();
+    }
+
+    public void setName(String name) {
+        this.name.set(name);
+    }
+
+    public SimpleStringProperty nameProperty() {
+        return name;
+    }
+
+    public String getWorker() {
+        return worker.get();
+    }
+
+    public void setWorker(String worker) {
+        this.worker.set(worker);
+    }
+
+    public SimpleStringProperty workerProperty() {
+        return worker;
+    }
+
+    public boolean isCompleted() {
+        return completed.get();
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed.set(completed);
+    }
+
+    public SimpleBooleanProperty completedProperty() {
+        return completed;
+    }
 
     @Override
     public String toString() {
-        return "Task{id=" + id + ", name='" + name + "', worker='" + worker + "', completed=" + completed + "}";
+        return "Task{" +
+                "name='" + name.get() + '\'' +
+                ", worker='" + worker.get() + '\'' +
+                ", completed=" + completed.get() +
+                '}';
     }
 }
