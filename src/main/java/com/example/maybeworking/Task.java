@@ -1,5 +1,6 @@
 package com.example.maybeworking;
 
+import javafx.beans.Observable;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 
@@ -57,5 +58,10 @@ public class Task {
                 ", worker='" + worker.get() + '\'' +
                 ", completed=" + completed.get() +
                 '}';
+    }
+
+
+    public SimpleBooleanProperty getCompletedProperty() {
+        return completed;
     }
 }

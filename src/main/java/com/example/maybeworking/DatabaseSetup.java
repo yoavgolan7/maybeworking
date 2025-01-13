@@ -1,4 +1,5 @@
-package com.example.maybeworking;
+
+        package com.example.maybeworking;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -6,7 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DatabaseSetup {
-    private static final String URL = "jdbc:mysql://localhost:3306/";
+    private static final String URL = "jdbc:mysql://localhost:3306/create_tasks_table";
     private static final String USER = "root";
     private static final String PASSWORD = "admin";
 
@@ -23,18 +24,22 @@ public class DatabaseSetup {
     }
 
     public static void createTable() {
-        String createTableSQL = "CREATE TABLE IF NOT EXISTS create_tasks_table.tasks ("
+        String createTableSQL = "CREATE TABLE IF NOT EXISTS tasks ("
                 + "id INT AUTO_INCREMENT PRIMARY KEY, "
                 + "name VARCHAR(255) NOT NULL, "
                 + "worker VARCHAR(255) NOT NULL, "
                 + "completed BOOLEAN NOT NULL)";
 
-        try (Connection connection = DatabaseConnection.getConnection();
+        try (Connection connection = getConnection();
              Statement statement = connection.createStatement()) {
             statement.executeUpdate(createTableSQL);
             System.out.println("Table created successfully.");
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 }

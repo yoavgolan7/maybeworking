@@ -1,19 +1,20 @@
 package com.example.maybeworking;
 
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.cell.CheckBoxTableCell;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 public class HelloController {
@@ -33,19 +34,30 @@ public class HelloController {
     private TableColumn<Task, String> workerColumn;
 
     @FXML
-    private TableColumn<Task, Boolean> completeColumn;
+    private TableColumn<Task, String> completeColumn;
+
+    @FXML
+    private ComboBox<String> filterComboBox;
 
     private ObservableList<Task> taskList;
+    private FilteredList<Task> filteredTaskList;
 
     @FXML
     public void initialize() {
         taskList = FXCollections.observableArrayList();
-        taskTableView.setItems(taskList);
+        filteredTaskList = new FilteredList<>(taskList, p -> true);
+        taskTableView.setItems(filteredTaskList);
 
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         workerColumn.setCellValueFactory(new PropertyValueFactory<>("worker"));
-        completeColumn.setCellValueFactory(new PropertyValueFactory<>("completed"));
-        completeColumn.setCellFactory(CheckBoxTableCell.forTableColumn(completeColumn));
+        completeColumn.setCellValueFactory(cellData -> {
+            boolean completed = cellData.getValue().isCompleted();
+            return new SimpleStringProperty(completed ? "Yes" : "No");
+        });
+
+        filterComboBox.setItems(FXCollections.observableArrayList("Show all", "Show complete", "Show incomplete"));
+        filterComboBox.setValue("Show all");
+        filterComboBox.setOnAction(event -> updateFilter());
 
         loadTasksFromDatabase();
     }
@@ -64,6 +76,21 @@ public class HelloController {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void updateFilter() {
+        String selectedFilter = filterComboBox.getValue();
+        switch (selectedFilter) {
+            case "Show complete":
+                filteredTaskList.setPredicate(task -> task.isCompleted());
+                break;
+            case "Show incomplete":
+                filteredTaskList.setPredicate(task -> !task.isCompleted());
+                break;
+            default:
+                filteredTaskList.setPredicate(task -> true);
+                break;
         }
     }
 
@@ -86,13 +113,77 @@ public class HelloController {
 
     @FXML
     private void handleSaveTasks() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("tasks.txt"))) {
+        String deleteSQL = "DELETE FROM tasks";
+        String insertSQL = "INSERT INTO tasks (name, worker, completed) VALUES (?, ?, ?)";
+
+        try (Connection connection = DatabaseSetup.getConnection();
+             Statement deleteStatement = connection.createStatement();
+             PreparedStatement insertStatement = connection.prepareStatement(insertSQL)) {
+
+            // Clear existing data
+            deleteStatement.execute(deleteSQL);
+
+            // Insert new data
             for (Task task : taskList) {
-                writer.write(task.toString());
-                writer.newLine();
+                insertStatement.setString(1, task.getName());
+                insertStatement.setString(2, task.getWorker());
+                insertStatement.setBoolean(3, task.isCompleted());
+                insertStatement.addBatch();
             }
-            System.out.println("Tasks saved to file.");
-        } catch (IOException e) {
+
+            insertStatement.executeBatch();
+            System.out.println("Tasks saved to database.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void handleChangeStatus() {
+        Task selectedTask = taskTableView.getSelectionModel().getSelectedItem();
+        if (selectedTask != null) {
+            selectedTask.setCompleted(!selectedTask.isCompleted());
+            updateTaskCompletion(selectedTask);
+            taskTableView.refresh();
+        }
+    }
+
+    private void updateTaskCompletion(Task task) {
+        String updateSQL = "UPDATE tasks SET completed = ? WHERE name = ? AND worker = ?";
+
+        try (Connection connection = DatabaseSetup.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(updateSQL)) {
+
+            preparedStatement.setBoolean(1, task.isCompleted());
+            preparedStatement.setString(2, task.getName());
+            preparedStatement.setString(3, task.getWorker());
+            preparedStatement.executeUpdate();
+            System.out.println("Task completion updated in database.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void handleDeleteTask() {
+        Task selectedTask = taskTableView.getSelectionModel().getSelectedItem();
+        if (selectedTask != null) {
+            taskList.remove(selectedTask);
+            deleteTaskFromDatabase(selectedTask);
+        }
+    }
+
+    private void deleteTaskFromDatabase(Task task) {
+        String deleteSQL = "DELETE FROM tasks WHERE name = ? AND worker = ?";
+
+        try (Connection connection = DatabaseSetup.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(deleteSQL)) {
+
+            preparedStatement.setString(1, task.getName());
+            preparedStatement.setString(2, task.getWorker());
+            preparedStatement.executeUpdate();
+            System.out.println("Task deleted from database.");
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
